@@ -1,0 +1,32 @@
+# General
+.env
+.env.*
+*.log
+*.sqlite3
+__pycache__/
+.DS_Store
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.poetry/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+.build/
+.next/
+.cache/
+
+# Alembic
+apps/backend/alembic/versions/*.pyc
+
+# IDE
+.vscode/
+.idea/
