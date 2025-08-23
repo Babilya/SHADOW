@@ -7,26 +7,33 @@ import redis.asyncio as redis
 from quantumx_api.routers import health, wallet, osint, shop, vip, casino
 from quantumx_api.routers import bonus
 from quantumx_api.db.session import create_async_engine_and_session
+from quantumx_api.settings import settings
 
-app = FastAPI(title="QuantumX API")
+app = FastAPI(title=settings.APP_TITLE)
 
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+	CORSMiddleware,
+	allow_origins=settings.CORS_ALLOW_ORIGINS,
+	allow_credentials=True,
+	allow_methods=["*"],
+	allow_headers=["*"],
 )
 
 @app.on_event("startup")
 async def on_startup() -> None:
-    pool = redis.from_url("redis://redis:6379/0", encoding="utf-8", decode_responses=True)
-    await FastAPILimiter.init(pool)
-    await create_async_engine_and_session()
+	if settings.RATE_LIMIT_ENABLED and settings.REDIS_URL:
+		pool = redis.from_url(settings.REDIS_URL, encoding="utf-8", decode_responses=True)
+		await FastAPILimiter.init(pool)
+	await create_async_engine_and_session(settings.DATABASE_URL)
 
-@app.get("/", dependencies=[RateLimiter(times=5, seconds=1)])
-async def root():
-    return {"name": "QuantumX", "status": "ok"}
+if settings.RATE_LIMIT_ENABLED:
+	@app.get("/", dependencies=[RateLimiter(times=5, seconds=1)])
+	async def root():
+		return {"name": "QuantumX", "status": "ok"}
+else:
+	@app.get("/")
+	async def root():
+		return {"name": "QuantumX", "status": "ok"}
 
 app.include_router(health.router, prefix="/health", tags=["health"])
 app.include_router(wallet.router, prefix="/wallet", tags=["wallet"])
