@@ -1,0 +1,19 @@
+{
+  "name": "@quantumx/monorepo",
+  "version": "0.1.0",
+  "description": "QuantumX — ультрасучасна екосистема Telegram WebApp + AI/OSINT платформа.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm -w @quantumx/bot run build && npm -w @quantumx/webapp run build",
+    "dev": "npm -w @quantumx/bot run dev",
+    "start": "npm -w @quantumx/bot start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "private": "true",
+  "workspaces": [
+    "packages/*"
+  ]
+}

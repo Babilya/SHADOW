@@ -1,0 +1,16 @@
+:root {
+  --qx-bg: #0A0812;
+  --qx-surface: #171426;
+  --qx-text: #ECF0FF;
+  --qx-text-dim: #B9BFEA;
+
+  --qx-primary: #B131FA;
+  --qx-accent-magenta: #FF1CC0;
+  --qx-accent-blue: #1C3AFF;
+  --qx-deep: #4A0074;
+
+  --qx-gradient: linear-gradient(135deg,#1C3AFF 0%,#B131FA 55%,#FF1CC0 100%);
+  --qx-radius: 16px;
+  --qx-shadow: 0 8px 24px rgba(177,49,250,.25);
+  --qx-glass: rgba(255,255,255,.08);
+}
