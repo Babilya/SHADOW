@@ -1,13 +1,14 @@
 {
   "name": "@quantumx/shared",
   "version": "0.1.0",
-  "main": "index.js",
+  "type": "module",
+  "description": "QuantumX shared modules: provably-fair RNG, games, economy, and tokens",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc -p tsconfig.json"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "type": "module"
+  "author": "SHADOW and COMPANY",
+  "license": "ISC"
 }
