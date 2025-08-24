@@ -16,11 +16,11 @@ class Base(DeclarativeBase):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-async def create_async_engine_and_session(database_url: str | None = None) -> None:
+async def create_async_engine_and_session() -> None:
     global _engine, _async_session
     if _engine is not None:
         return
-    database_url = database_url or os.getenv("DATABASE_URL", "postgresql+asyncpg://quantumx:quantumx@postgres:5432/quantumx")
+    database_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://quantumx:quantumx@postgres:5432/quantumx")
     _engine = create_async_engine(database_url, echo=False, pool_pre_ping=True)
     _async_session = async_sessionmaker(bind=_engine, expire_on_commit=False, autoflush=False, autocommit=False)
 
