@@ -36,7 +36,7 @@ async def cmd_start(message: Message):
 
 @dp.message(Command("help"))
 async def cmd_help(message: Message):
-    await message.answer("/profile, /balance, /bonus, /app, /osint, /casino, /shop, /vip")
+    await message.answer("/profile, /balance, /bonus, /app, /osint, /casino, /shop, /vip, /buy <sku> [qty]")
 
 @dp.message(Command("app"))
 async def cmd_app(message: Message):
@@ -78,8 +78,25 @@ async def cmd_shop(message: Message):
     async with httpx.AsyncClient() as client:
         r = await client.get(f"{API_URL}/shop/items")
         items = r.json().get("items", [])
-    text = "\n".join([f"{i['name']}: {i['price_st']} ST" for i in items])
+    text = "\n".join([f"{i['id']} — {i['name']}: {i['price_st']} ST" for i in items])
     await message.answer(text or "No items")
+
+@dp.message(Command("buy"))
+async def cmd_buy(message: Message):
+    parts = message.text.strip().split()
+    if len(parts) < 2:
+        await message.answer("Використання: /buy <sku> [qty]")
+        return
+    sku = parts[1]
+    qty = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 1
+    tid = message.from_user.id
+    async with httpx.AsyncClient() as client:
+        r = await client.post(f"{API_URL}/shop/purchase", json={"telegram_id": tid, "sku": sku, "quantity": qty})
+    if r.status_code == 200:
+        data = r.json()
+        await message.answer(f"Покупку виконано ✅ Новий баланс: {data['new_balance']} ST")
+    else:
+        await message.answer(f"Помилка: {r.json().get('detail', 'unknown')}")
 
 @dp.message(Command("casino"))
 async def cmd_casino(message: Message):

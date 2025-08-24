@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_limiter import FastAPILimiter
-from fastapi_limiter.depends import RateLimiter
 import redis.asyncio as redis
+import os
 
 from quantumx_api.routers import health, wallet, osint, shop, vip, casino
 from quantumx_api.routers import bonus
@@ -20,11 +20,16 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def on_startup() -> None:
-    pool = redis.from_url("redis://redis:6379/0", encoding="utf-8", decode_responses=True)
-    await FastAPILimiter.init(pool)
+    try:
+        redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
+        pool = redis.from_url(redis_url, encoding="utf-8", decode_responses=True)
+        await FastAPILimiter.init(pool)
+    except Exception:
+        # Limiter is optional in dev/test
+        pass
     await create_async_engine_and_session()
 
-@app.get("/", dependencies=[RateLimiter(times=5, seconds=1)])
+@app.get("/")
 async def root():
     return {"name": "QuantumX", "status": "ok"}
 
