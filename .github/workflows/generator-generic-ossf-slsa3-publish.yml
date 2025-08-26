@@ -32,14 +32,14 @@ jobs:
       # ========================================================
       - name: Build artifacts
         run: |
-            # Эти артефакты — пример; замените на сборку вашего проекта.
-            echo "artifact1" > "artifact 1"
-            echo "artifact2" > artifact2
+          # Эти артефакты — пример; замените на сборку вашего проекта.
+          echo "artifact1" > artifact1
+          echo "artifact2" > artifact2
 
       # ========================================================
       #
       # Step 2: Generate subject for provenance
-      # Improved: robust handling of filenames with spaces, stable base64 output,
+      # Robust handling of filenames with spaces, stable base64 output,
       # and deterministic ordering.
       #
       # ========================================================
@@ -48,36 +48,32 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          # Ищем артефакты в корне репо (поддерживаем пробелы в именах).
-          # Подберите шаблон под ваш проект.
-          files=(./artifact* ./\"artifact 1\")
-          # Фильтруем реальные файлы, убираем каталоги и leading ./
-          real_files=()
-          for p in "${files[@]}"; do
-            if [ -f "$p" ]; then
-              real_files+=("${p#./}")
-            fi
-          done
 
-          if [ "${#real_files[@]}" -eq 0 ]; then
+          # Find artifacts matching the pattern in the repo root (null-separated).
+          mapfile -d '' files < <(find . -maxdepth 1 -type f -name 'artifact*' -print0)
+
+          if [ "${#files[@]}" -eq 0 ]; then
             echo "digests=" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
 
-          # Сортируем список файлов для детерминированности
+          # Normalize names (remove leading ./) and sort for determinism
+          real_files=()
+          for p in "${files[@]}"; do
+            p="${p#./}"
+            real_files+=("$p")
+          done
           IFS=$'\n' sorted=($(printf "%s\n" "${real_files[@]}" | sort))
           unset IFS
 
-          # Для каждого файла вычисляем sha256, собираем конкатенированную строку hex хэшей.
+          # Concatenate hex sha256 hashes (no separators), then base64-encode the resulting string.
           hashes=""
           for f in "${sorted[@]}"; do
             h=$(sha256sum "$f" | awk '{print $1}')
             hashes="${hashes}${h}"
           done
 
-          # base64 без переносов, стандартный алфавит
-          encoded=$(printf "%s" "$hashes" | base64 | tr -d '\n')
+          encoded=$(printf "%s" "$hashes" | base64 -w0)
           echo "digests=${encoded}" >> "${GITHUB_OUTPUT}"
 
   provenance:
