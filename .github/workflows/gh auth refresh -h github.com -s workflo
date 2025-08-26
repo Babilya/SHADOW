@@ -1,0 +1,3 @@
+gh auth refresh -h github.com -s workflow,repo
+# или выполнить интерактивный вход
+gh auth login

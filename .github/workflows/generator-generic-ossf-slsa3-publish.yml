@@ -1,1 +1,72 @@
-# вставьте сюда ровно содержимое из блока выше (без первой строки с // filepath:)
+name: SLSA generic generator
+on:
+  workflow_dispatch:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      digests: ${{ steps.hash.outputs.digests }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build artifacts
+        run: |
+          # Замените на реальные шаги сборки вашего проекта
+          echo "artifact1" > artifact1
+          echo "artifact2" > artifact2
+
+      - name: Generate subject for provenance
+        id: hash
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Найти артефакты в корне репозитория (поддерживает пробелы в именах)
+          mapfile -d '' files < <(find . -maxdepth 1 -type f -name 'artifact*' -print0)
+
+          if [ "${#files[@]}" -eq 0 ]; then
+            # явно выставляем пустой вывод, чтобы outputs.digests всегда существовал
+            echo "digests=" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          # Нормализовать имена и отсортировать для детерминированности
+          real_files=()
+          for p in "${files[@]}"; do
+            p="${p#./}"
+            real_files+=("$p")
+          done
+          IFS=$'\n' sorted=($(printf "%s\n" "${real_files[@]}" | sort))
+          unset IFS
+
+          # Конкатенируем hex sha256-хэши
+          hashes=""
+          for f in "${sorted[@]}"; do
+            h=$(sha256sum "$f" | awk '{print $1}')
+            hashes="${hashes}${h}"
+          done
+
+          # Кодируем в base64 без переносов и проверяем, что можно корректно декодировать
+          encoded=$(printf "%s" "$hashes" | base64 | tr -d '\n')
+          if ! printf "%s" "$encoded" | base64 --decode >/dev/null 2>&1; then
+            echo "ERROR: generated base64 is invalid" >&2
+            exit 1
+          fi
+
+          echo "digests=${encoded}" >> "${GITHUB_OUTPUT}"
+
+  provenance:
+    needs: [build]
+    permissions:
+      actions: read
+      id-token: write
+      contents: read
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.4.0
+    with:
+      base64-subjects: "${{ needs.build.outputs.digests }}"
+      upload-assets: true
+

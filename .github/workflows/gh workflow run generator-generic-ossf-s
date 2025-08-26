@@ -1,0 +1,1 @@
+gh workflow run generator-generic-ossf-slsa3-publish.yml --ref main

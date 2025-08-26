@@ -1,0 +1,6 @@
+# показать последние 5 запусков этого workflow
+gh run list --workflow generator-generic-ossf-slsa3-publish.yml --limit 5
+
+# получить id самого свежего запуска и показать логи
+run_id=$(gh run list --workflow generator-generic-ossf-slsa3-publish.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+gh run view "$run_id" --log
