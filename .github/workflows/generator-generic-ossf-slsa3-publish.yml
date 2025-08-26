@@ -1,1 +1,84 @@
-# (вставьте сюда содержимое из блока выше, включая заголовки)
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# This workflow lets you generate SLSA provenance file for your project.
+# The generation satisfies level 3 for the provenance requirements - see https://slsa.dev/spec/v0.1/requirements
+# The project is an initiative of the OpenSSF (openssf.org) and is developed at
+# https://github.com/slsa-framework/slsa-github-generator.
+# The provenance file can be verified using https://github.com/slsa-framework/slsa-verifier.
+# For more information about SLSA and how it improves the supply-chain, visit slsa.dev.
+
+name: SLSA generic generator
+on:
+  workflow_dispatch:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      digests: ${{ steps.hash.outputs.digests }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ========================================================
+      #
+      # Step 1: Build your artifacts.
+      #
+      # ========================================================
+      - name: Build artifacts
+        run: |
+            # These are some amazing artifacts.
+            echo "artifact1" > artifact1
+            echo "artifact2" > artifact2
+
+      # ========================================================
+      #
+      # Step 2: Add a step to generate the provenance subjects
+      #         as shown below. Update the sha256 sum arguments
+      #         to include all binaries that you generate
+      #         provenance for.
+      #
+      # Improved: robust handling of filenames with spaces, and stable base64 output.
+      #
+      # ========================================================
+      - name: Generate subject for provenance
+        id: hash
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Find artifacts matching the pattern in the repo root (null-separated).
+          mapfile -d '' files < <(find . -maxdepth 1 -type f -name 'artifact*' -print0)
+
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "digests=" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          # Concatenate hex sha256 hashes (no separators), then base64-encode the resulting string.
+          hashes=""
+          for f in "${files[@]}"; do
+            # remove leading ./ from find results
+            f="${f#./}"
+            h=$(sha256sum "$f" | awk '{print $1}')
+            hashes="${hashes}${h}"
+          done
+
+          encoded=$(printf "%s" "$hashes" | base64 -w0)
+          echo "digests=${encoded}" >> "${GITHUB_OUTPUT}"
+
+  provenance:
+    needs: [build]
+    permissions:
+      actions: read   # To read the workflow path.
+      id-token: write # To sign the provenance.
+      contents: write # To add assets to a release.
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.4.0
+    with:
+      base64-subjects: "${{ needs.build.outputs.digests }}"
+      upload-assets: true # Optional: Upload to a new release
