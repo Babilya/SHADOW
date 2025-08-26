@@ -32,18 +32,15 @@ jobs:
       # ========================================================
       - name: Build artifacts
         run: |
-            # These are some amazing artifacts.
-            echo "artifact1" > artifact1
+            # Эти артефакты — пример; замените на сборку вашего проекта.
+            echo "artifact1" > "artifact 1"
             echo "artifact2" > artifact2
 
       # ========================================================
       #
-      # Step 2: Add a step to generate the provenance subjects
-      #         as shown below. Update the sha256 sum arguments
-      #         to include all binaries that you generate
-      #         provenance for.
-      #
-      # Improved: robust handling of filenames with spaces, and stable base64 output.
+      # Step 2: Generate subject for provenance
+      # Improved: robust handling of filenames with spaces, stable base64 output,
+      # and deterministic ordering.
       #
       # ========================================================
       - name: Generate subject for provenance
@@ -51,34 +48,45 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          shopt -s nullglob
+          # Ищем артефакты в корне репо (поддерживаем пробелы в именах).
+          # Подберите шаблон под ваш проект.
+          files=(./artifact* ./\"artifact 1\")
+          # Фильтруем реальные файлы, убираем каталоги и leading ./
+          real_files=()
+          for p in "${files[@]}"; do
+            if [ -f "$p" ]; then
+              real_files+=("${p#./}")
+            fi
+          done
 
-          # Find artifacts matching the pattern in the repo root (null-separated).
-          mapfile -d '' files < <(find . -maxdepth 1 -type f -name 'artifact*' -print0)
-
-          if [ "${#files[@]}" -eq 0 ]; then
+          if [ "${#real_files[@]}" -eq 0 ]; then
             echo "digests=" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
 
-          # Concatenate hex sha256 hashes (no separators), then base64-encode the resulting string.
+          # Сортируем список файлов для детерминированности
+          IFS=$'\n' sorted=($(printf "%s\n" "${real_files[@]}" | sort))
+          unset IFS
+
+          # Для каждого файла вычисляем sha256, собираем конкатенированную строку hex хэшей.
           hashes=""
-          for f in "${files[@]}"; do
-            # remove leading ./ from find results
-            f="${f#./}"
+          for f in "${sorted[@]}"; do
             h=$(sha256sum "$f" | awk '{print $1}')
             hashes="${hashes}${h}"
           done
 
-          encoded=$(printf "%s" "$hashes" | base64 -w0)
+          # base64 без переносов, стандартный алфавит
+          encoded=$(printf "%s" "$hashes" | base64 | tr -d '\n')
           echo "digests=${encoded}" >> "${GITHUB_OUTPUT}"
 
   provenance:
     needs: [build]
     permissions:
-      actions: read   # To read the workflow path.
-      id-token: write # To sign the provenance.
-      contents: write # To add assets to a release.
+      actions: read
+      id-token: write
+      contents: write
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.4.0
     with:
       base64-subjects: "${{ needs.build.outputs.digests }}"
-      upload-assets: true # Optional: Upload to a new release
+      upload-assets: true
