@@ -10,5 +10,8 @@
   },
   "keywords": [],
   "author": "SHADOW and COMPANY",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^24.3.0"
+  }
 }

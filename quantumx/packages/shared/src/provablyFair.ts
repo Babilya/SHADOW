@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { ProvablyFairState } from './types.js';
 
 export function sha256Hex(input: string): string {

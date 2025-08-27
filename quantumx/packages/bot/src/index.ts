@@ -196,7 +196,7 @@ bot.on('message', async (ctx) => {
   s.messages += 1;
   const uid = ctx.from?.id; if (uid) s.users.set(uid, (s.users.get(uid) || 0) + 1);
   const text = 'text' in ctx.message ? ctx.message.text || '' : '';
-  if (/(https?:\/\/|t\.me\//i.test(text)) s.links += 1;
+  if (/(https?:\/\/|t\.me\/)/i.test(text)) s.links += 1;
 });
 
 bot.command('INSIGHTS', async (ctx) => {
@@ -215,7 +215,7 @@ bot.command('MUTE', async (ctx) => {
     if (!username) return ctx.reply('ФОРМАТ: /MUTE @USER 10M');
     const until = Math.floor(Date.now()/1000) + (duration.toLowerCase().endsWith('m') ? parseInt(duration)*60 : parseInt(duration));
     const member = await ctx.telegram.getChatMember(chat.id, username);
-    await ctx.telegram.restrictChatMember(chat.id, member.user.id, { can_send_messages: false, until_date: until });
+    await ctx.telegram.restrictChatMember(chat.id, member.user.id, { permissions: { can_send_messages: false }, until_date: until });
     await ctx.reply(`MUTED ${username} ДО ${duration.toUpperCase()}`);
   } catch {
     await ctx.reply('НЕ ВДАЛОСЯ ВИКОНАТИ MUTE. ПЕРЕВІРТЕ ПРАВА.');
