@@ -23,6 +23,15 @@ import {
   searchTelegramId,
   analyzeDomain,
   analyzeIp,
+  createProject,
+  getProject,
+  getUserProjects,
+  updateProject,
+  deleteProject,
+  addTask,
+  updateTask,
+  deleteTask,
+  getProjectStats,
 } from '@quantumx/shared';
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -68,6 +77,112 @@ app.post('/economy/exchange', (req, res) => {
     const { userId, direction, amount } = req.body as { userId: string; direction: 'ST_TO_COINS' | 'COINS_TO_ST'; amount: number };
     if (direction === 'ST_TO_COINS') exchangeToCoins(userId, amount); else exchangeToSt(userId, amount);
     res.json({ ok: true, balances: getBalances(userId) });
+  } catch (e: any) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+// Projects
+app.get('/projects', (req, res) => {
+  try {
+    const userId = String(req.query.userId || 'anon');
+    const projects = getUserProjects(userId);
+    res.json({ ok: true, projects });
+  } catch (e: any) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+app.post('/projects', (req, res) => {
+  try {
+    const { userId, title, description } = req.body as { userId: string; title: string; description?: string };
+    const project = createProject(userId, title, description);
+    res.json({ ok: true, project });
+  } catch (e: any) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+app.get('/projects/:projectId', (req, res) => {
+  try {
+    const userId = String(req.query.userId || 'anon');
+    const { projectId } = req.params;
+    const project = getProject(userId, projectId);
+    if (!project) {
+      return res.status(404).json({ ok: false, error: 'Project not found' });
+    }
+    res.json({ ok: true, project });
+  } catch (e: any) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+app.put('/projects/:projectId', (req, res) => {
+  try {
+    const { userId, title, description, status } = req.body as { userId: string; title?: string; description?: string; status?: 'active' | 'completed' | 'archived' };
+    const { projectId } = req.params;
+    const project = updateProject(userId, projectId, { title, description, status });
+    res.json({ ok: true, project });
+  } catch (e: any) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+app.delete('/projects/:projectId', (req, res) => {
+  try {
+    const userId = String(req.query.userId || 'anon');
+    const { projectId } = req.params;
+    const deleted = deleteProject(userId, projectId);
+    if (!deleted) {
+      return res.status(404).json({ ok: false, error: 'Project not found' });
+    }
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+app.post('/projects/:projectId/tasks', (req, res) => {
+  try {
+    const { userId, title, description } = req.body as { userId: string; title: string; description?: string };
+    const { projectId } = req.params;
+    const task = addTask(userId, projectId, title, description);
+    res.json({ ok: true, task });
+  } catch (e: any) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+app.put('/projects/:projectId/tasks/:taskId', (req, res) => {
+  try {
+    const { userId, title, description, completed } = req.body as { userId: string; title?: string; description?: string; completed?: boolean };
+    const { projectId, taskId } = req.params;
+    const task = updateTask(userId, projectId, taskId, { title, description, completed });
+    res.json({ ok: true, task });
+  } catch (e: any) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+app.delete('/projects/:projectId/tasks/:taskId', (req, res) => {
+  try {
+    const userId = String(req.query.userId || 'anon');
+    const { projectId, taskId } = req.params;
+    const deleted = deleteTask(userId, projectId, taskId);
+    if (!deleted) {
+      return res.status(404).json({ ok: false, error: 'Task not found' });
+    }
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+app.get('/projects/stats', (req, res) => {
+  try {
+    const userId = String(req.query.userId || 'anon');
+    const stats = getProjectStats(userId);
+    res.json({ ok: true, stats });
   } catch (e: any) {
     res.status(400).json({ ok: false, error: e.message });
   }
@@ -196,7 +311,7 @@ bot.on('message', async (ctx) => {
   s.messages += 1;
   const uid = ctx.from?.id; if (uid) s.users.set(uid, (s.users.get(uid) || 0) + 1);
   const text = 'text' in ctx.message ? ctx.message.text || '' : '';
-  if (/(https?:\/\/|t\.me\//i.test(text)) s.links += 1;
+  if (/(https?:\/\/|t\.me\/)/i.test(text)) s.links += 1;
 });
 
 bot.command('INSIGHTS', async (ctx) => {
@@ -215,7 +330,7 @@ bot.command('MUTE', async (ctx) => {
     if (!username) return ctx.reply('ФОРМАТ: /MUTE @USER 10M');
     const until = Math.floor(Date.now()/1000) + (duration.toLowerCase().endsWith('m') ? parseInt(duration)*60 : parseInt(duration));
     const member = await ctx.telegram.getChatMember(chat.id, username);
-    await ctx.telegram.restrictChatMember(chat.id, member.user.id, { can_send_messages: false, until_date: until });
+    await ctx.telegram.restrictChatMember(chat.id, member.user.id, { permissions: { can_send_messages: false }, until_date: until });
     await ctx.reply(`MUTED ${username} ДО ${duration.toUpperCase()}`);
   } catch {
     await ctx.reply('НЕ ВДАЛОСЯ ВИКОНАТИ MUTE. ПЕРЕВІРТЕ ПРАВА.');
@@ -244,6 +359,7 @@ bot.start(async (ctx) => {
       [Markup.button.webApp('OPEN QUANTUMX', url)],
       [Markup.button.callback('PROFILE', 'profile'), Markup.button.callback('BALANCE', 'balance')],
       [Markup.button.callback('DAILY BONUS', 'bonus'), Markup.button.callback('GAMES', 'games')],
+      [Markup.button.callback('PROJECTS', 'projects')],
     ])
   );
 });
@@ -286,6 +402,138 @@ bot.action('bonus', async (ctx) => {
 
 bot.action('games', async (ctx) => {
   await ctx.reply('ВІДКРИЙТЕ РОЗДІЛ GAMES У WEBAPP.');
+});
+
+bot.action('projects', async (ctx) => {
+  const userId = String(ctx.from?.id || 'anon');
+  try {
+    const projects = getUserProjects(userId);
+    if (projects.length === 0) {
+      await ctx.reply('У ВАС НЕМАЄ ПРОЕКТІВ.\nВикористайте /newproject НАЗВА для створення нового проекту.');
+      return;
+    }
+    
+    const projectList = projects.slice(0, 5).map(p => 
+      `📋 ${p.title}\n   📊 ${p.completedTasks}/${p.taskCount} завдань\n   📅 ${p.status.toUpperCase()}`
+    ).join('\n\n');
+    
+    await ctx.reply(`ВАШІ ПРОЕКТИ:\n\n${projectList}\n\nВикористайте /projects для повного списку`);
+  } catch (e: any) {
+    await ctx.reply(`ПОМИЛКА: ${e.message}`);
+  }
+});
+
+// Project Management Commands
+bot.command('projects', async (ctx) => {
+  const userId = String(ctx.from?.id || 'anon');
+  try {
+    const projects = getUserProjects(userId);
+    if (projects.length === 0) {
+      await ctx.reply('У ВАС НЕМАЄ ПРОЕКТІВ.\nВикористайте /newproject НАЗВА для створення нового проекту.');
+      return;
+    }
+    
+    const projectList = projects.map(p => 
+      `📋 ${p.title}\n   📊 ${p.completedTasks}/${p.taskCount} завдань\n   📅 ${p.status.toUpperCase()}`
+    ).join('\n\n');
+    
+    await ctx.reply(`ВАШІ ПРОЕКТИ:\n\n${projectList}\n\nВикористайте /project ID для деталей`);
+  } catch (e: any) {
+    await ctx.reply(`ПОМИЛКА: ${e.message}`);
+  }
+});
+
+bot.command('newproject', async (ctx) => {
+  const userId = String(ctx.from?.id || 'anon');
+  try {
+    const parts = (ctx.message as any).text.split(/\s+/);
+    const title = parts.slice(1).join(' ');
+    
+    if (!title) {
+      await ctx.reply('ФОРМАТ: /newproject НАЗВА ПРОЕКТУ');
+      return;
+    }
+    
+    const project = createProject(userId, title);
+    await ctx.reply(`✅ ПРОЕКТ СТВОРЕНО!\n\n📋 ${project.title}\n🆔 ${project.id}\n\nВикористайте /addtask ${project.id} НАЗВА для додавання завдань`);
+  } catch (e: any) {
+    await ctx.reply(`ПОМИЛКА: ${e.message}`);
+  }
+});
+
+bot.command('project', async (ctx) => {
+  const userId = String(ctx.from?.id || 'anon');
+  try {
+    const parts = (ctx.message as any).text.split(/\s+/);
+    const projectId = parts[1];
+    
+    if (!projectId) {
+      await ctx.reply('ФОРМАТ: /project ID');
+      return;
+    }
+    
+    const project = getProject(userId, projectId);
+    if (!project) {
+      await ctx.reply('ПРОЕКТ НЕ ЗНАЙДЕНО');
+      return;
+    }
+    
+    const taskList = project.tasks.length > 0 
+      ? project.tasks.map(t => `${t.completed ? '✅' : '⭕'} ${t.title}`).join('\n')
+      : 'Немає завдань';
+    
+    await ctx.reply(`📋 ${project.title}\n\nЗАВДАННЯ:\n${taskList}\n\n📊 Статус: ${project.status.toUpperCase()}\n🆔 ${project.id}`);
+  } catch (e: any) {
+    await ctx.reply(`ПОМИЛКА: ${e.message}`);
+  }
+});
+
+bot.command('addtask', async (ctx) => {
+  const userId = String(ctx.from?.id || 'anon');
+  try {
+    const parts = (ctx.message as any).text.split(/\s+/);
+    const projectId = parts[1];
+    const taskTitle = parts.slice(2).join(' ');
+    
+    if (!projectId || !taskTitle) {
+      await ctx.reply('ФОРМАТ: /addtask PROJECT_ID НАЗВА ЗАВДАННЯ');
+      return;
+    }
+    
+    const task = addTask(userId, projectId, taskTitle);
+    await ctx.reply(`✅ ЗАВДАННЯ ДОДАНО!\n\n📝 ${task.title}\n🆔 ${task.id}\n\nВикористайте /complete ${projectId} ${task.id} для позначення як виконане`);
+  } catch (e: any) {
+    await ctx.reply(`ПОМИЛКА: ${e.message}`);
+  }
+});
+
+bot.command('complete', async (ctx) => {
+  const userId = String(ctx.from?.id || 'anon');
+  try {
+    const parts = (ctx.message as any).text.split(/\s+/);
+    const projectId = parts[1];
+    const taskId = parts[2];
+    
+    if (!projectId || !taskId) {
+      await ctx.reply('ФОРМАТ: /complete PROJECT_ID TASK_ID');
+      return;
+    }
+    
+    const task = updateTask(userId, projectId, taskId, { completed: true });
+    await ctx.reply(`🎉 ЗАВДАННЯ ВИКОНАНО!\n\n✅ ${task.title}`);
+  } catch (e: any) {
+    await ctx.reply(`ПОМИЛКА: ${e.message}`);
+  }
+});
+
+bot.command('projectstats', async (ctx) => {
+  const userId = String(ctx.from?.id || 'anon');
+  try {
+    const stats = getProjectStats(userId);
+    await ctx.reply(`📊 СТАТИСТИКА ПРОЕКТІВ:\n\n📋 Всього проектів: ${stats.totalProjects}\n🟢 Активних: ${stats.activeProjects}\n✅ Виконаних завдань: ${stats.completedTasks}/${stats.totalTasks}\n📈 Прогрес: ${stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0}%`);
+  } catch (e: any) {
+    await ctx.reply(`ПОМИЛКА: ${e.message}`);
+  }
 });
 
 const PORT = Number(process.env.PORT || 3001);

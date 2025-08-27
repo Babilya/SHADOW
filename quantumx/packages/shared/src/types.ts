@@ -15,6 +15,38 @@ export interface TransactionRecord {
   meta?: Record<string, unknown>;
 }
 
+// Project Management Types
+export interface ProjectTask {
+  id: string;
+  title: string;
+  description?: string;
+  completed: boolean;
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface Project {
+  id: string;
+  userId: UserId;
+  title: string;
+  description?: string;
+  tasks: ProjectTask[];
+  createdAt: string;
+  updatedAt: string;
+  status: 'active' | 'completed' | 'archived';
+}
+
+export interface ProjectSummary {
+  id: string;
+  title: string;
+  description?: string;
+  taskCount: number;
+  completedTasks: number;
+  status: 'active' | 'completed' | 'archived';
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProvablyFairState {
   serverSeed: string;
   serverSeedHash: string;
