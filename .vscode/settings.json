@@ -4,5 +4,8 @@
         "ок": true
     },
     "editor.formatOnPaste": true,
-    "editor.mouseWheelZoom": true
+    "editor.mouseWheelZoom": true,
+    "github-actions.workflows.pinned.workflows": [
+        ".github/workflows/pylint.yml"
+    ]
 }
