@@ -365,6 +365,33 @@ bot.start(async (ctx) => {
 });
 
 bot.command('profile', async (ctx) => ctx.reply('ВАШ ПРОФІЛЬ QUANTUMX'));
+
+bot.command('help', async (ctx) => {
+  const helpText = `📋 ДОСТУПНІ КОМАНДИ QUANTUMX:
+
+👤 ПРОФІЛЬ:
+/profile - Ваш профіль
+/balance - Перевірити баланс
+/bonus - Отримати щоденний бонус
+
+📊 ПРОЕКТИ:
+/projects - Список ваших проектів
+/newproject НАЗВА - Створити новий проект
+/project ID - Деталі проекту
+/addtask PROJECT_ID НАЗВА - Додати завдання
+/complete PROJECT_ID TASK_ID - Виконати завдання
+/projectstats - Статистика проектів
+
+🔧 АДМІНІСТРУВАННЯ:
+/INSIGHTS - Аналітика чату
+/MUTE @USER - Замутити користувача
+/BAN @USER - Забанити користувача
+
+💡 Використайте WebApp для повного функціоналу!`;
+  
+  await ctx.reply(helpText);
+});
+
 bot.command('balance', async (ctx) => {
   const userId = String(ctx.from?.id || 'anon');
   const b = getBalances(userId);
